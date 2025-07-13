@@ -1,0 +1,347 @@
+{
+  "name": "Attendance Tracking",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1180,
+        -320
+      ],
+      "id": "a16d1785-57a9-46b6-962d-445fa93b00e1",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "content": "Automatically runs the workflow at regular intervals.",
+        "width": 180,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1260,
+        -400
+      ],
+      "id": "9df671c5-9070-438c-b392-7707dba7ace5",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Contains attendance records of the class, used for processing and alerting in the workflow.",
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1020,
+        -500
+      ],
+      "id": "ab74ffd0-3311-4509-b031-47ac763972a4",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "**Function Node:** Calculates each student's attendance percentage from Google Sheets and adds an `\"alert\"` flag if it's below 50%.\n",
+        "width": 260,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        -480
+      ],
+      "id": "bd088c49-9ed3-423d-8654-0518fd1dc3e9",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Filters out students whose attendance percentage is below 50% by checking if the \"alert\" value is set to \"Yes\".",
+        "height": 100,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1220,
+        -60
+      ],
+      "id": "7e7d0177-2e39-44b9-8c97-64146bff16d1",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Sends a personalized attendance alert email to each student with attendance below 50%.",
+        "height": 80,
+        "width": 280,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        -300
+      ],
+      "id": "76253162-d155-4c17-8fc0-05f83a9cc74a",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Generates a summary list of students with low attendance to be sent to the teacher.\n",
+        "height": 80,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        160
+      ],
+      "id": "1ccc5ce2-5d4b-4aac-91c4-13cdda0d33a2",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Sends a summary email to the teacher listing all students with attendance below 50%.\n",
+        "height": 80,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        120
+      ],
+      "id": "b955ee03-2e0a-415a-ac3c-ca1f8df1d8c5",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const row = item.json;\n  const totalDays = 5;\n\n  const dates = ['2025-04-28', '2025-04-29', '2025-04-30', '2025-05-01', '2025-05-02'];\n\n  const presentStatuses = ['present', 'p'];\n  const presentDays = dates.filter(date => {\n    const status = (row[date] || '').toLowerCase();\n    return presentStatuses.includes(status);\n  }).length;\n\n  const attendancePercentage = (presentDays / totalDays) * 100;\n\n  return {\n    json: {\n      name: row[\"Student Name\"],\n      studentEmail: row[\"Student Email\"],\n      teacherEmail: row[\"Teacher Email\"],\n      attendancePercentage: attendancePercentage.toFixed(2),\n      alert: attendancePercentage < 50 ? \"Yes\" : \"No\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        -360
+      ],
+      "id": "39169d7a-3851-4889-a3b7-966dd313bf85",
+      "name": "Calculate Attendance %"
+    },
+    {
+      "parameters": {
+        "jsCode": "const students = items.map(item => {\n  const s = item.json;\n  return `${s.name} - ${s.attendancePercentage}%`;\n});\n\nreturn [{\n  json: {\n    teacherEmail: \"dhanyafab@gmail.com\",\n    summary: students.join('\\n')\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        0
+      ],
+      "id": "b2905b1e-19e1-465f-89e3-ba7e92ef828d",
+      "name": "Create Summary for Teacher"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json[\"studentEmail\"]}}",
+        "subject": "Alert: Your performance is below expectations",
+        "message": "=<p>Dear {{ $json[\"name\"] }},</p>\n\n<p>Your current attendance percentage is <strong>{{ $json[\"attendancePercentage\"] }}%</strong>.</p>\n\n<p>This is below the expected performance threshold of <strong>50%</strong>.</p>\n\n<p>Please take necessary actions to improve your attendance.</p>\n\n<p>Best Regards,<br> Dr.N.G.P Arts and Science College</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -380,
+        -220
+      ],
+      "id": "fa1ef4fc-226c-48bc-916c-178b5ae605f8",
+      "name": "Send Alert to Student",
+      "webhookId": "0fab59ad-a048-450c-97fd-e03d30d5a125",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P1lRWjAY7TLkMPPc",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.teacherEmail }}",
+        "subject": "Students Alert Summary",
+        "message": "=<p>Dear Teacher,</p>\n<p>The following students have attendance below 50%:</p>\n<ul>\n  {{ $json.summary.split('\\n').map(student => `<li>${student}</li>`).join('') }}\n</ul>\n<p>Regards,<br>Dr.N.G.P. Arts and Science College</p>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -380,
+        -40
+      ],
+      "id": "2cf4a852-20e2-4be8-95a2-a1c079db71eb",
+      "name": "Send Summary to Teacher",
+      "webhookId": "dd3ec739-de5c-439d-b820-4902aa9700b8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P1lRWjAY7TLkMPPc",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d19ae85d-fc3f-4b3d-b488-4d6929efe0b0",
+              "leftValue": "={{ $json.alert }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -940,
+        -120
+      ],
+      "id": "bc99782f-797f-4293-90b9-f50eeeedf232",
+      "name": "Students Below 50%"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Pq7gZLWYXflootkamgDD2s5Uzxy6zCt3AyGcapy6qSc",
+          "mode": "list",
+          "cachedResultName": "MSc",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Pq7gZLWYXflootkamgDD2s5Uzxy6zCt3AyGcapy6qSc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Pq7gZLWYXflootkamgDD2s5Uzxy6zCt3AyGcapy6qSc/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -940,
+        -400
+      ],
+      "id": "9f54aa5b-ffb0-4fd6-9748-7f887759e4ae",
+      "name": "Students Attendance Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DvxD7gmuYNLgU7vx",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Students Attendance Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Attendance %": {
+      "main": [
+        [
+          {
+            "node": "Students Below 50%",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Summary for Teacher": {
+      "main": [
+        [
+          {
+            "node": "Send Summary to Teacher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert to Student": {
+      "main": [
+        []
+      ]
+    },
+    "Students Below 50%": {
+      "main": [
+        [
+          {
+            "node": "Send Alert to Student",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Summary for Teacher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Students Attendance Sheet": {
+      "main": [
+        [
+          {
+            "node": "Calculate Attendance %",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "adb87800-10dc-4031-aaef-5446ed944802",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1b7a7a2943c0e21a6ff0e6b8d8c6154f4504ed40c9e297bb4e83356372c87c5c"
+  },
+  "id": "pYeNWtBw4P5BQTlL",
+  "tags": []
+}
